@@ -1,5 +1,5 @@
 import { paramCase } from 'change-case';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 // @mui
 import {
@@ -36,6 +36,8 @@ import { TableEmptyRows, TableHeadCustom, TableNoData, TableSelectedActions } fr
 // sections
 import UserTableToolbar from '../../sections/user/list/UserTableToolbar';
 import UserTableRow from '../../sections/user/list/UserTableRow';
+// Services
+import { getUser } from 'src/services/UserService';
 
 // ----------------------------------------------------------------------
 
@@ -56,11 +58,9 @@ const ROLE_OPTIONS = [
 
 const TABLE_HEAD = [
   { id: 'name', label: 'Name', align: 'left' },
-  { id: 'company', label: 'Company', align: 'left' },
+  { id: 'email', label: 'Email', align: 'left' },
   { id: 'role', label: 'Role', align: 'left' },
-  { id: 'isVerified', label: 'Verified', align: 'center' },
-  { id: 'status', label: 'Status', align: 'left' },
-  { id: '' },
+  { id: '', label: 'Actions', align: 'center'  },
 ];
 
 // ----------------------------------------------------------------------
@@ -89,13 +89,26 @@ export default function List() {
 
   const navigate = useNavigate();
 
-  const [tableData, setTableData] = useState(_userList);
-
   const [filterName, setFilterName] = useState('');
 
   const [filterRole, setFilterRole] = useState('all');
 
   const { currentTab: filterStatus, onChangeTab: onChangeFilterStatus } = useTabs('all');
+
+  const [tableData, setTableData] = useState([]);
+
+  useEffect(() => {
+    fetchUsersData();
+  }, []);
+
+  const fetchUsersData = async () => {
+    const data = await getUser();
+    if(data.status == 200){
+      setTableData(data.data.data)
+      console.log(data)
+      console.log(tableData);
+    }
+  }
 
   const handleFilterName = (filterName) => {
     setFilterName(filterName);
@@ -279,14 +292,6 @@ function applySortFilter({ tableData, comparator, filterName, filterStatus, filt
 
   if (filterName) {
     tableData = tableData.filter((item) => item.name.toLowerCase().indexOf(filterName.toLowerCase()) !== -1);
-  }
-
-  if (filterStatus !== 'all') {
-    tableData = tableData.filter((item) => item.status === filterStatus);
-  }
-
-  if (filterRole !== 'all') {
-    tableData = tableData.filter((item) => item.role === filterRole);
   }
 
   return tableData;

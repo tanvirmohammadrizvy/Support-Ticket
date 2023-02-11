@@ -13,11 +13,12 @@ import { Box, Card, Grid, Stack, Switch, Typography, FormControlLabel } from '@m
 import { fData } from 'src/utils/formatNumber';
 // routes
 import { PATH_DASHBOARD } from 'src/routes/paths';
-// _mock
-import { countries } from 'src/_mock';
 // components
 import Label from 'src/components/Label';
 import { FormProvider, RHFSelect, RHFSwitch, RHFTextField, RHFUploadAvatar } from 'src/components/hook-form';
+
+// Services
+import { postUser } from 'src/services/UserService';
 
 // ----------------------------------------------------------------------
 
@@ -32,33 +33,32 @@ export default function UserNewEditForm({ isEdit, currentUser }) {
   //const { enqueueSnackbar } = useSnackbar();
 
   const NewUserSchema = Yup.object().shape({
-    name: Yup.string().required('Name is required'),
-    email: Yup.string().required('Email is required').email(),
-    phoneNumber: Yup.string().required('Phone number is required'),
-    address: Yup.string().required('Address is required'),
-    country: Yup.string().required('country is required'),
-    company: Yup.string().required('Company is required'),
-    state: Yup.string().required('State is required'),
-    city: Yup.string().required('City is required'),
-    role: Yup.string().required('Role Number is required'),
-    avatarUrl: Yup.mixed().test('required', 'Avatar is required', (value) => value !== ''),
-  });
+    name: Yup.string()
+      .min(2, 'Name must have at least 2 characters')
+      .max(50, 'Name can’t be longer than 50 characters')
+      .required('Name is required'),
+    email: Yup.string()
+      .email('Invalid email address')
+      .required('Email is required'),
+    password: Yup.string()
+      .min(8, 'Password must have at least 8 characters')
+      .max(50, 'Password can’t be longer than 50 characters')
+      .required('Password is required'),
+    rePassword: Yup.string()
+      .oneOf([Yup.ref('password'), null], 'Passwords must match')
+      .required('Confirm Password is required'),  
+    role: Yup.string()  
+      .required('Role is required'),  												  
+  })
 
   const defaultValues = useMemo(
     () => ({
       name: currentUser?.name || '',
       email: currentUser?.email || '',
-      phoneNumber: currentUser?.phoneNumber || '',
-      address: currentUser?.address || '',
-      country: currentUser?.country || '',
-      state: currentUser?.state || '',
-      city: currentUser?.city || '',
-      zipCode: currentUser?.zipCode || '',
-      avatarUrl: currentUser?.avatarUrl || '',
-      isVerified: currentUser?.isVerified || true,
-      status: currentUser?.status,
-      company: currentUser?.company || '',
+      password: currentUser?.password || '',
+      rePassword: currentUser?.rePassword || '',
       role: currentUser?.role || '',
+      profilePicture: currentUser?.profilePicture || '',
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [currentUser]
@@ -90,15 +90,12 @@ export default function UserNewEditForm({ isEdit, currentUser }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEdit, currentUser]);
 
-  const onSubmit = async () => {
+  const onSubmit = async (values) => {
     try {
-      if(!isEdit){
-        
-      }
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      reset();
+      const { data } = await postUser(values);
       //enqueueSnackbar(!isEdit ? 'Create success!' : 'Update success!');
-      navigate(PATH_DASHBOARD.user.root);
+      // navigate(PATH_DASHBOARD.user.root);
+      console.log(data);
     } catch (error) {
       console.error(error);
     }
@@ -110,7 +107,7 @@ export default function UserNewEditForm({ isEdit, currentUser }) {
 
       if (file) {
         setValue(
-          'avatarUrl',
+          'profilePicture',
           Object.assign(file, {
             preview: URL.createObjectURL(file),
           })
@@ -123,20 +120,13 @@ export default function UserNewEditForm({ isEdit, currentUser }) {
   return (
     <FormProvider methods={methods} onSubmit={handleSubmit(onSubmit)}>
       <Grid container spacing={3}>
-        <Grid item xs={12} md={4}>
-          <Card sx={{ py: 10, px: 3 }}>
-            {isEdit && (
-              <Label
-                color={values.status !== 'active' ? 'error' : 'success'}
-                sx={{ textTransform: 'uppercase', position: 'absolute', top: 24, right: 24 }}
-              >
-                {values.status}
-              </Label>
-            )}
 
+        <Grid item xs={12} md={4}>
+          <Card sx={{ py: 5.5, px: 3 }}>
+            
             <Box sx={{ mb: 5 }}>
               <RHFUploadAvatar
-                name="avatarUrl"
+                name="profilePicture"
                 accept="image/*"
                 maxSize={3145728}
                 onDrop={handleDrop}
@@ -157,52 +147,7 @@ export default function UserNewEditForm({ isEdit, currentUser }) {
                 }
               />
             </Box>
-
-            {isEdit && (
-              <FormControlLabel
-                labelPlacement="start"
-                control={
-                  <Controller
-                    name="status"
-                    control={control}
-                    render={({ field }) => (
-                      <Switch
-                        {...field}
-                        checked={field.value !== 'active'}
-                        onChange={(event) => field.onChange(event.target.checked ? 'banned' : 'active')}
-                      />
-                    )}
-                  />
-                }
-                label={
-                  <>
-                    <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-                      Banned
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                      Apply disable account
-                    </Typography>
-                  </>
-                }
-                sx={{ mx: 0, mb: 3, width: 1, justifyContent: 'space-between' }}
-              />
-            )}
-
-            <RHFSwitch
-              name="isVerified"
-              labelPlacement="start"
-              label={
-                <>
-                  <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-                    Email Verified
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    Disabling this will automatically send the user a verification email
-                  </Typography>
-                </>
-              }
-              sx={{ mx: 0, width: 1, justifyContent: 'space-between' }}
-            />
+    
           </Card>
         </Grid>
 
@@ -218,22 +163,8 @@ export default function UserNewEditForm({ isEdit, currentUser }) {
             >
               <RHFTextField name="name" label="Full Name" />
               <RHFTextField name="email" label="Email Address" />
-              <RHFTextField name="phoneNumber" label="Phone Number" />
-
-              <RHFSelect name="country" label="Country" placeholder="Country">
-                <option value="" />
-                {countries.map((option) => (
-                  <option key={option.code} value={option.label}>
-                    {option.label}
-                  </option>
-                ))}
-              </RHFSelect>
-
-              <RHFTextField name="state" label="State/Region" />
-              <RHFTextField name="city" label="City" />
-              <RHFTextField name="address" label="Address" />
-              <RHFTextField name="zipCode" label="Zip/Code" />
-              <RHFTextField name="company" label="Company" />
+              <RHFTextField name="password" label="Set an account password" />
+              <RHFTextField name="rePassword" label="Confirm account password" />
               <RHFTextField name="role" label="Role" />
             </Box>
 
