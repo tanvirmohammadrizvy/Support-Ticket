@@ -58,7 +58,6 @@ export default function UserNewEditForm({ isEdit, currentUser }) {
       password: currentUser?.password || '',
       rePassword: currentUser?.rePassword || '',
       role: currentUser?.role || '',
-      profilePicture: currentUser?.profilePicture || '',
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [currentUser]
